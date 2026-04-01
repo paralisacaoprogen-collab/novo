@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XFC Arena - Gestão Oficial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { 
+            font-family: 'Inter', sans-serif; color: white; 
+            background: linear-gradient(rgba(0,0,0,0.92), rgba(0,0,0,0.96)), url('XFC.jpeg');
+            background-size: cover; background-position: center; background-attachment: fixed; min-height: 100vh;
+        }
+        .glass { background: rgba(15, 15, 15, 0.85); backdrop-filter: blur(14px); border: 1px solid rgba(251, 191, 36, 0.15); }
+        .pos-GOL { background: #ef4444; } .pos-ZAG { background: #3b82f6; }
+        .pos-MEI { background: #fbbf24; color: black; } .pos-ATA { background: #f97316; }
+        [x-cloak] { display: none !important; }
+        .animate-pulse-gold { animation: pulse 2s infinite; }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(251, 191, 36, 0); } 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); } }
+    </style>
+</head>
+<body x-data="xfcApp()" x-init="init()">
+
+    <header class="bg-yellow-500 p-4 sticky top-0 z-50 shadow-2xl flex justify-between items-center text-black">
+        <h1 class="font-black italic text-xl uppercase tracking-tighter">XFC ARENA</h1>
+        <div class="flex items-center gap-2">
+            <span class="text-[10px] font-black bg-black/10 px-2 py-1 rounded" x-text="listaSorteio.length + ' NO JOGO'"></span>
+            <button @click="resetarCiclo()" class="text-[10px] bg-black text-white px-3 py-1 rounded font-bold uppercase">Zerar Ciclo</button>
+        </div>
+    </header>
+
+    <div class="fixed right-4 top-1/2 -translate-y-1/2 z-[100] flex flex-col gap-4">
+        <button @click="abrirPagamentoMensal('mensalista')" class="w-14 h-14 bg-yellow-500 rounded-2xl flex items-center justify-center border-2 border-black shadow-xl hover:scale-110 transition-all" title="Mensalista">
+            <span class="text-black font-black text-xl">M</span>
+        </button>
+        <button @click="abrirPagamentoMensal('mantenedor')" class="w-14 h-14 bg-cyan-500 rounded-2xl flex items-center justify-center border-2 border-black shadow-xl hover:scale-110 transition-all" title="Mantenedor">
+            <span class="text-black font-black text-xl">🛡️</span>
+        </button>
+    </div>
+
+    <main class="max-w-4xl mx-auto p-4 py-8 space-y-8">
+        
+        <div x-show="etapa === 'lista'" class="space-y-6">
+            <button @click="abrirInscricaoJogo()" class="w-full bg-yellow-500 text-black py-6 rounded-3xl font-black text-2xl shadow-xl uppercase animate-pulse-gold">
+                ⚽ ENTRAR NA LISTA
+            </button>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <template x-for="j in listaSorteio" :key="j.id">
+                    <div class="glass p-4 rounded-2xl flex justify-between items-center border-l-4 border-yellow-500">
+                        <div class="flex items-center gap-4">
+                            <div :class="'pos-' + j.posicao" class="w-10 h-10 rounded-xl flex items-center justify-center font-black text-[10px]" x-text="j.posicao"></div>
+                            <div>
+                                <div class="font-black uppercase text-yellow-500 text-sm" x-text="j.nome"></div>
+                                <div class="text-[9px] text-slate-400 font-bold uppercase" x-text="j.tipo"></div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <button x-show="listaSorteio.length >= 4" @click="confirmarSorteio()" class="w-full bg-white text-black py-5 rounded-2xl font-black text-xl shadow-lg uppercase">Sortear Times ⚡</button>
+        </div>
+
+        <div x-show="etapa === 'resultado'" x-cloak class="space-y-6">
+            <div class="text-center space-y-2">
+                <h2 class="font-black text-yellow-500 text-3xl uppercase italic tracking-tighter">Confronto Definido</h2>
+                <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest italic">Sincronizado em tempo real</p>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <template x-for="(time, i) in timesGerados">
+                    <div class="glass rounded-3xl overflow-hidden border-2 border-yellow-500/20 shadow-2xl">
+                        <div class="bg-yellow-500 p-3 font-black text-center text-black uppercase" x-text="'ESQUADRÃO ' + (i+1)"></div>
+                        <div class="p-4 space-y-2">
+                            <template x-for="p in time">
+                                <div class="bg-white/5 p-3 rounded-xl flex justify-between items-center border border-white/5">
+                                    <span class="font-bold uppercase text-sm" x-text="p.nome"></span>
+                                    <span class="text-[9px] text-yellow-500 font-black uppercase" x-text="p.posicao"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </template>
+            </div>
+            <button @click="etapa = 'lista'" class="w-full bg-zinc-800 py-4 rounded-2xl font-bold text-yellow-500 uppercase text-[10px]">Ver Lista de Inscritos</button>
+        </div>
+    </main>
+
+    <section class="max-w-4xl mx-auto p-4 mt-10 border-t border-white/10 pb-20">
+        <h2 class="text-center font-black text-yellow-500 uppercase text-[10px] mb-8 tracking-[0.3em]">Painel Administrativo</h2>
+        
+        <div x-show="!logado" class="glass p-8 rounded-3xl text-center max-w-sm mx-auto">
+            <input type="password" x-model="senha" placeholder="Senha" class="w-full bg-black border border-white/10 p-4 rounded-xl text-center mb-4 text-white outline-none">
+            <button @click="fazerLogin()" class="w-full bg-zinc-800 text-yellow-500 py-4 rounded-xl font-black text-xs uppercase">Acessar</button>
+        </div>
+
+        <div x-show="logado" x-cloak class="space-y-6">
+            <div class="glass p-5 rounded-3xl border-yellow-500/30">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-black text-yellow-500 text-xs uppercase italic">🎟️ Visitantes (R$ 15,00)</h3>
+                    <span class="bg-green-500 text-black px-3 py-1 rounded text-[10px] font-black" x-text="'TOTAL: R$ ' + (listaSorteio.filter(j => j.tipo === 'visitante').length * 15) + ',00'"></span>
+                </div>
+                <div class="grid gap-2">
+                    <template x-for="f in listaSorteio.filter(j => j.tipo === 'visitante')" :key="f.id">
+                        <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                            <span class="font-bold uppercase text-[11px]" x-text="f.nome"></span>
+                            <span class="text-green-500 font-black text-[9px]">PAGO ✓</span>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <div class="glass p-5 rounded-3xl border-cyan-500/30">
+                <h3 class="font-black text-cyan-500 text-xs uppercase mb-4 italic">💰 Mensalistas & Mantenedores</h3>
+                <div class="grid gap-2">
+                    <template x-for="f in listaFinanceiroMensal" :key="f.id">
+                        <div class="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/5">
+                            <div>
+                                <span class="font-bold uppercase text-[11px]" x-text="f.nome"></span>
+                                <span class="block text-[8px] text-slate-400 uppercase" x-text="f.tipo"></span>
+                            </div>
+                            <button @click="removerFin(f.id)" class="text-red-500 font-black text-[9px] uppercase">Remover</button>
+                        </div>
+                    </template>
+                </div>
+            </div>
+
+            <button @click="logado = false" class="w-full text-slate-600 font-black text-[10px] uppercase">Sair do Painel</button>
+        </div>
+    </section>
+
+    <div x-show="showModalCad" class="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center p-4" x-cloak>
+        <div class="glass p-8 rounded-[40px] w-full max-w-sm space-y-6 border-yellow-500">
+            <h3 class="text-center font-black text-yellow-500 uppercase italic">Confirmar Presença</h3>
+            <input x-model="form.nome" type="text" placeholder="SEU NOME" class="w-full bg-black p-5 rounded-2xl border border-white/10 text-white uppercase font-black outline-none focus:border-yellow-500">
+            <div class="grid grid-cols-2 gap-3">
+                <select x-model="form.posicao" class="bg-black p-4 rounded-xl text-white text-[11px] border border-white/10 font-bold outline-none">
+                    <option value="GOL">Goleiro</option><option value="ZAG">Zagueiro</option><option value="MEI">Meio-Campo</option><option value="ATA">Atacante</option>
+                </select>
+                <select x-model="form.tipo" class="bg-black p-4 rounded-xl text-white text-[11px] border border-white/10 font-bold outline-none">
+                    <option value="visitante">Visitante</option><option value="mensalista">Mensalista</option><option value="mantenedor">Mantenedor</option>
+                </select>
+            </div>
+            <button @click="processarInscricaoJogo()" class="w-full bg-yellow-500 text-black py-5 rounded-2xl font-black uppercase" x-text="form.tipo === 'visitante' ? 'Pagar R$ 15,00' : 'Entrar na Lista'"></button>
+            <button @click="showModalCad = false" class="w-full text-slate-500 text-[10px] font-black uppercase">Cancelar</button>
+        </div>
+    </div>
+
+    <div x-show="showPix" class="fixed inset-0 bg-black/98 z-[300] flex items-center justify-center p-4" x-cloak>
+        <div class="glass p-8 rounded-[40px] w-full max-w-sm text-center space-y-6 border-yellow-500">
+            <div x-show="!pixGerado">
+                <h3 class="font-black text-yellow-500 uppercase mb-4" x-text="'PAGAMENTO ' + form.tipo"></h3>
+                <input x-model="form.nome" type="text" placeholder="SEU NOME COMPLETO" class="w-full bg-black p-4 rounded-xl border border-white/10 text-white font-black uppercase outline-none mb-4">
+                <button @click="pixGerado = true" class="w-full bg-yellow-500 text-black py-4 rounded-xl font-black uppercase">Gerar QR Code</button>
+            </div>
+            <div x-show="pixGerado" class="space-y-6">
+                <div class="bg-white p-2 inline-block rounded-2xl mx-auto border-4 border-yellow-500 shadow-2xl">
+                    <img :src="'https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=' + encodeURIComponent(getPixString())">
+                </div>
+                <p class="text-white text-3xl font-black italic tracking-tighter" x-text="getValor()"></p>
+                <button @click="finalizarInscricao()" class="w-full bg-yellow-500 text-black py-4 rounded-xl font-black uppercase shadow-lg">Confirmar Pagamento</button>
+            </div>
+            <button @click="showPix = false; pixGerado = false" class="text-slate-600 text-[10px] font-black uppercase">Voltar</button>
+        </div>
+    </div>
+
+    <script>
+        const API = "https://api.npoint.io/af23b1be1b7083d862a9";
+        
+        function xfcApp() {
+            return {
+                etapa: 'lista', showModalCad: false, showPix: false, pixGerado: false, logado: false, fluxoSorteio: true,
+                senha: '', listaSorteio: [], listaFinanceiroMensal: [], timesGerados: [],
+                form: { nome: '', posicao: 'MEI', tipo: 'visitante' },
+
+                async init() {
+                    await this.sync();
+                    // Sync a cada 8 segundos para atualizar em todos os celulares
+                    setInterval(() => this.sync(), 8000);
+                },
+
+                async sync() {
+                    try {
+                        const r = await fetch(API);
+                        const d = await r.json();
+                        this.listaSorteio = d.sorteio || [];
+                        this.listaFinanceiroMensal = d.financeiro_mensal || [];
+                        
+                        // Sincronização da tela de resultado
+                        if (d.times_gerados && d.times_gerados.length > 0) {
+                            this.timesGerados = d.times_gerados;
+                            this.etapa = 'resultado';
+                        } else {
+                            this.timesGerados = [];
+                            this.etapa = 'lista';
+                        }
+                    } catch(e) { console.log("Erro de conexão") }
+                },
+
+                async save(s, fm, tg) {
+                    await fetch(API, { 
+                        method: 'POST', 
+                        headers: {'Content-Type': 'application/json'}, 
+                        body: JSON.stringify({ sorteio: s, financeiro_mensal: fm, times_gerados: tg }) 
+                    });
+                },
+
+                abrirInscricaoJogo() {
+                    this.form = { nome: '', posicao: 'MEI', tipo: 'visitante' };
+                    this.fluxoSorteio = true;
+                    this.showModalCad = true;
+                },
+
+                abrirPagamentoMensal(tipo) {
+                    this.form = { nome: '', posicao: 'MEI', tipo: tipo };
+                    this.fluxoSorteio = false; 
+                    this.pixGerado = false;
+                    this.showPix = true;
+                },
+
+                processarInscricaoJogo() {
+                    if(!this.form.nome.trim()) return alert("Digite seu nome!");
+                    if(this.form.tipo === 'visitante') {
+                        this.showModalCad = false; this.pixGerado = true; this.showPix = true;
+                    } else { this.finalizarInscricao(); }
+                },
+
+                async finalizarInscricao() {
+                    const nomeNorm = this.form.nome.trim().toUpperCase();
+                    const registro = { id: Date.now(), nome: nomeNorm, tipo: this.form.tipo, posicao: this.form.posicao };
+                    
+                    await this.sync(); // Garante lista atual antes de salvar
+
+                    let novaSor = [...this.listaSorteio];
+                    let novaFinM = [...this.listaFinanceiroMensal];
+
+                    if(this.fluxoSorteio) {
+                        if(!novaSor.some(x => x.nome === nomeNorm)) novaSor.push(registro);
+                    } else {
+                        if(!novaFinM.some(x => x.nome === nomeNorm)) novaFinM.push(registro);
+                    }
+
+                    await this.save(novaSor, novaFinM, this.timesGerados);
+                    this.showModalCad = this.showPix = this.pixGerado = false;
+                    confetti({ particleCount: 100, origin: { y: 0.8 } });
+                    this.sync();
+                },
+
+                getPixString() {
+                    const c = {
+                        visitante: "00020101021126360014br.gov.bcb.pix01144218035300016052040000530398654015.005802BR5920ALMEIDA REPRESENTACO6009SAO PAULO62070503***6304C43E",
+                        mensalista: "00020101021126360014br.gov.bcb.pix011442180353000160520400005303986540570.005802BR5920ALMEIDA REPRESENTACO6009SAO PAULO62070503***6304C43E",
+                        mantenedor: "00020101021126360014br.gov.bcb.pix0114421803530001605204000053039865406100.005802BR5920ALMEIDA REPRESENTACO6009SAO PAULO62070503***63041FFD"
+                    };
+                    return c[this.form.tipo];
+                },
+
+                getValor() { return this.form.tipo === 'visitante' ? 'R$ 15,00' : this.form.tipo === 'mensalista' ? 'R$ 70,00' : 'R$ 100,00'; },
+
+                fazerLogin() { if(this.senha === 'Diretoria') this.logado = true; else alert("Senha incorreta!"); },
+
+                async removerFin(id) {
+                    if(confirm("Remover este registro?")) {
+                        let novaFin = this.listaFinanceiroMensal.filter(x => x.id !== id);
+                        await this.save(this.listaSorteio, novaFin, this.timesGerados);
+                        this.sync();
+                    }
+                },
+
+                async resetarCiclo() {
+                    if(confirm("Deseja zerar a lista e o sorteio?")) {
+                        await this.save([], this.listaFinanceiroMensal, []);
+                        this.sync();
+                    }
+                },
+
+                async confirmarSorteio() {
+                    if(this.listaSorteio.length < 4) return alert("Mínimo de 4 jogadores!");
+                    
+                    const grupos = { GOL: [], ZAG: [], MEI: [], ATA: [] };
+                    this.listaSorteio.forEach(j => grupos[j.posicao].push(j));
+
+                    const t1 = [], t2 = [];
+                    Object.keys(grupos).forEach(pos => {
+                        let jogs = grupos[pos].sort(() => Math.random() - 0.5);
+                        jogs.forEach((j, i) => i % 2 === 0 ? t1.push(j) : t2.push(j));
+                    });
+
+                    await this.save(this.listaSorteio, this.listaFinanceiroMensal, [t1, t2]);
+                    confetti({ particleCount: 200, spread: 90 });
+                    this.sync();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
